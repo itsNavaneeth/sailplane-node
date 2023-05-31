@@ -33,14 +33,14 @@ const storeTypes = { lite: 0, full: 1, archive: 2 }
 const defaultOptions = {
   autoStart: true,
   load: true,
-  onStop: function () {},
+  onStop: function () { },
   storeType: storeTypes.lite,
   Crypter: null
 }
 
 
 class SharedFS {
-  constructor (db, ipfs, options = {}) {
+  constructor(db, ipfs, options = {}) {
     this._db = db
     this._ipfs = ipfs
     this.options = { ...defaultOptions, ...options }
@@ -68,7 +68,7 @@ class SharedFS {
     this._onDbUpdate = () => {
       this.events.emit('updated')
       this._updateQueue.size === 0 &&
-      this._updateQueue.add(() => this._computeCid())
+        this._updateQueue.add(() => this._computeCid())
     }
 
     this._emptyDirCid = null
@@ -86,17 +86,17 @@ class SharedFS {
     this.running = null
   }
 
-  get identity () { return this._db.identity }
+  get identity() { return this._db.identity }
 
-  get encrypted () { return this.access.crypted }
+  get encrypted() { return this.access.crypted }
 
-  static async create (fsstore, ipfs, options = {}) {
+  static async create(fsstore, ipfs, options = {}) {
     const sharedfs = new SharedFS(fsstore, ipfs, options)
     if (sharedfs.options.autoStart) await sharedfs.start()
     return sharedfs
   }
 
-  async start () {
+  async start() {
     if (this.running !== null) { return }
     this._emptyDirCid = await this._ipfs.object.put({ Data: unixFsType.dir })
     this._emptyFileCid = await this._ipfs.object.put({ Data: unixFsType.file })
@@ -119,7 +119,7 @@ class SharedFS {
     this.events.emit('start')
   }
 
-  async stop ({ drop } = {}) {
+  async stop({ drop } = {}) {
     if (this.running !== true) { return }
     await this.options.onStop()
     this.access.events.removeListener('encrypted', this._onDbUpdate)
@@ -139,7 +139,7 @@ class SharedFS {
     this.events.emit('stop')
   }
 
-  async upload (path, source, options = {}) {
+  async upload(path, source, options = {}) {
     writeReqs(this)
 
     const ipfsAddOptions = { ...options, ...util.ipfsAddConfig }
@@ -191,32 +191,32 @@ class SharedFS {
     }
   }
 
-  async mkdir (path, name) {
-    writeReqs(this)
+  async mkdir(path, name) {
+    // writeReqs(this)
     await this._db.mkdir(path, name)
     this.events.emit('mkdir')
   }
 
-  async mkfile (path, name) {
-    writeReqs(this)
+  async mkfile(path, name) {
+    // writeReqs(this)
     await this._db.mk(path, name)
     this.events.emit('mkfile')
   }
 
-  async write (path, cid, options = {}) {
-    writeReqs(this)
+  async write(path, cid, options = {}) {
+    // writeReqs(this)
     if (!this._CID.isCID(cid)) throw new Error('invalid cid')
     await this._db.write(path, { cid: cid.toString(), key: options.key })
     this.events.emit('write')
   }
 
-  async read (path) {
-    readReqs(this)
+  async read(path) {
+    // readReqs(this)
     if (!this.fs.exists(path)) throw errors.pathExistNo(path)
     return this._computeCid(path)
   }
 
-  cat (path, { handleUpdate } = {}) {
+  cat(path, { handleUpdate } = {}) {
     readReqs(this)
     if (!this.fs.exists(path)) throw errors.pathExistNo(path)
     if (this.fs.content(path) !== cTypes.file) throw errors.pathFileNo(path)
@@ -245,22 +245,22 @@ class SharedFS {
     return this._db[key](path, dest, name)
   }
 
-  async remove (path) {
+  async remove(path) {
     await this._handleMutateFns(opcodes.RM, path)
     this.events.emit('remove')
   }
 
-  async move (path, dest, name) {
+  async move(path, dest, name) {
     await this._handleMutateFns(opcodes.MV, path, dest, name)
     this.events.emit('move')
   }
 
-  async copy (path, dest, name) {
+  async copy(path, dest, name) {
     await this._handleMutateFns(opcodes.CP, path, dest, name)
     this.events.emit('copy')
   }
 
-  async _computeCid (path = this.fs.root) {
+  async _computeCid(path = this.fs.root) {
     if (!this.access.hasRead) {
       console.warn('_computeCid skipped, no read access')
       return
