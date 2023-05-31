@@ -15,7 +15,7 @@ const perms = {
 }
 
 class AccessControl {
-  constructor (db, options) {
+  constructor(db, options) {
     this._db = db
     this._ac = db.access
     this.options = options
@@ -34,29 +34,29 @@ class AccessControl {
     this.running = null
   }
 
-  get identity () { return this._db.identity }
+  get identity() { return this._db.identity }
 
-  get publicKey () { return this._db.identity.publicKey }
+  get publicKey() { return this._db.identity.publicKey }
 
-  get admin () { return this._ac._db ? this._ac.get(perms.admin) : new Set() }
+  get admin() { return this._ac._db ? this._ac.get(perms.admin) : new Set() }
 
-  get read () { return this._ac._db ? this._ac.get(perms.read) : new Set() }
+  get read() { return this._ac._db ? this._ac.get(perms.read) : new Set() }
 
-  get write () { return this._ac._db ? this._ac.get(perms.write) : new Set(this._ac._write) }
+  get write() { return this._ac._db ? this._ac.get(perms.write) : new Set(this._ac._write) }
 
-  get hasAdmin () { return setHas(this.admin, this.identity.id, this.identity.publicKey, '*') }
+  get hasAdmin() { return setHas(this.admin, this.identity.id, this.identity.publicKey, '*') }
 
-  get hasRead () { return this.reading }
+  get hasRead() { return this.reading }
 
-  get hasWrite () { return setHas(this.write, this.identity.id, this.identity.publicKey, '*') || this.hasAdmin }
+  get hasWrite() { return setHas(this.write, this.identity.id, this.identity.publicKey, '*') || this.hasAdmin }
 
-  static async create (db, options) {
+  static async create(db, options) {
     const access = new AccessControl(db, options)
     await access.start()
     return access
   }
 
-  async start () {
+  async start() {
     if (this.running !== null) { return }
     if (this.crypted) {
       await this._setupEncryption()
@@ -70,7 +70,7 @@ class AccessControl {
     this.running = true
   }
 
-  async stop ({ drop } = {}) {
+  async stop({ drop } = {}) {
     if (this.running !== true) { return }
     if (this._ac._db) {
       this._ac._db.events.removeListener('replicated', this._onAccessUpdate)
@@ -81,7 +81,7 @@ class AccessControl {
     this.running = false
   }
 
-  async _setupEncryption () {
+  async _setupEncryption() {
     if (this._db._crypter && this.hasAdmin) {
       if (!this.read.has(this.identity.publicKey)) {
         await this.grantRead(this.identity.publicKey)
@@ -90,51 +90,51 @@ class AccessControl {
     await this._setCrypter()
   }
 
-  async _accessUpdatedAdmin () {}
+  async _accessUpdatedAdmin() { }
 
-  async _accessUpdated () {
+  async _accessUpdated() {
     if (this.hasAdmin) await this._accessUpdatedAdmin()
     if (this.crypted && !this.hasRead) await this._setCrypter()
   }
 
-  async grantWrite (publicKey) {
-    if (!this._ac._db) throw new Error('cannot mutate ipfs access controller')
-    if (!this.hasAdmin) throw new Error('no admin permissions, cannot grant write')
-    return this._ac.grant(perms.write, publicKey)
+  async grantWrite(publicKey) {
+    if (!this._ac._db) throw new Error('cannot mutate ipfs access controller');
+    return this._ac.grant(perms.write, publicKey);
   }
 
-  async grantRead (publicKey) {
-    if (!this._ac._db) throw new Error('cannot mutate ipfs access controller')
-    if (!this.hasAdmin) throw new Error('no admin permissions, cannot grant read')
-    if (!this.hasRead && this.running) throw new Error('no read permissions, cannot grant read')
-    if (!this.crypted) throw new Error('db not encrypted, cannot grant read')
+  async grantRead(publicKey) {
+    if (!this._ac._db) throw new Error('cannot mutate ipfs access controller');
+    if (!this.hasRead && this.running) throw new Error('no read permissions, cannot grant read');
+    if (!this.crypted) throw new Error('db not encrypted, cannot grant read');
 
-    const bufferKey = hex2buf(publicKey)
-    if (!crypto.verifyPub(bufferKey)) throw new Error('invalid publicKey provided')
+    const bufferKey = hex2buf(publicKey);
+    if (!crypto.verifyPub(bufferKey)) throw new Error('invalid publicKey provided');
 
     try {
-      const privateKey = await this.identity.provider.keystore.getKey(this.identity.id)
-      const crypter = await this._sharedCrypter(bufferKey, privateKey.marshal())
-      const driveKey = await this.Crypter.exportKey(this._db._crypter._cryptoKey)
-      const { cipherbytes, iv } = await crypter.encrypt(driveKey)
+      const privateKey = await this.identity.provider.keystore.getKey(this.identity.id);
+      const crypter = await this._sharedCrypter(bufferKey, privateKey.marshal());
+      const driveKey = await this.Crypter.exportKey(this._db._crypter._cryptoKey);
+      const { cipherbytes, iv } = await crypter.encrypt(driveKey);
 
       const encryptedKey = {
         publicKey: this.identity.publicKey,
         cipherbytes: b64.fromByteArray(new Uint8Array(cipherbytes)),
-        iv: b64.fromByteArray(iv)
-      }
-      const compressedHexPub = buf2hex(crypto.compressedPub(bufferKey))
+        iv: b64.fromByteArray(iv),
+      };
+      const compressedHexPub = buf2hex(crypto.compressedPub(bufferKey));
 
-      await this._ac.grant(perms.read, compressedHexPub)
-      await this._ac.grant(compressedHexPub, encryptedKey)
+      await this._ac.grant(perms.read, compressedHexPub);
+      await this._ac.grant(compressedHexPub, encryptedKey);
     } catch (e) {
-      console.error(e)
-      console.error(new Error('sharedfs.grantRead failed'))
-      console.error('publicKey:'); console.error(publicKey)
+      console.error(e);
+      console.error(new Error('sharedfs.grantRead failed'));
+      console.error('publicKey:');
+      console.error(publicKey);
     }
   }
 
-  async _setCrypter () {
+
+  async _setCrypter() {
     if (!this.Crypter) throw missingCrypter()
     const compressedHexPub = buf2hex(crypto.compressedPub(hex2buf(this.identity.publicKey)))
     const read = this.read.has(this.identity.publicKey) || this.read.has(compressedHexPub)
