@@ -140,7 +140,7 @@ class SharedFS {
   }
 
   async upload(path, source, options = {}) {
-    writeReqs(this)
+    // writeReqs(this)
 
     const ipfsAddOptions = { ...options, ...util.ipfsAddConfig }
 
@@ -240,7 +240,7 @@ class SharedFS {
   }
 
   _handleMutateFns(op, path, dest, name) {
-    writeReqs(this)
+    // writeReqs(this)
     const key = this.fs.content(path) === cTypes.dir ? op + cTypes.dir : op
     return this._db[key](path, dest, name)
   }
